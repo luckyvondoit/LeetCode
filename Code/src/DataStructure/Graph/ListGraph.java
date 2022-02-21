@@ -243,8 +243,6 @@ public class ListGraph<V, E> extends Graph<V, E> {
 	}
 
 	private void dfs2(Vertex<V, E> vertex, VertexVisitor<V> visitor, Set<Vertex<V, E>> visitedVertices) {
-//		if (visitor.stop) return;
-
 		visitedVertices.add(vertex);
 		visitor.stop = visitor.visit(vertex.value);
 		if (visitor.stop) return;
@@ -374,63 +372,6 @@ public class ListGraph<V, E> extends Graph<V, E> {
 		return dijkstra(begin);
 //		return bellmanFord(begin);
 	}
-
-	private Map<V, PathInfo<V, E>> bellmanFord(V begin) {
-		Vertex<V, E> beginVertex = vertices.get(begin);
-		if (beginVertex == null) return null;
-		
-		Map<V, PathInfo<V, E>> selectedPaths = new HashMap<>();
-		selectedPaths.put(begin, new PathInfo<>(weightManager.zero()));
-		
-		int count = vertices.size() - 1;
-		for (int i = 0; i < count; i++) { // v - 1 次
-			for (Edge<V, E> edge : edges) {
-				PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
-				if (fromPath == null) continue;
-				relax(edge, fromPath, selectedPaths);
-			}
-		}
-		
-		for (Edge<V, E> edge : edges) {
-			PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
-			if (fromPath == null) continue;
-			if (relax(edge, fromPath, selectedPaths)) {
-				System.out.println("有负权环");
-				return null;
-			}
-		}
-		
-		selectedPaths.remove(begin);
-		return selectedPaths;
-	}
-
-	
-	/**
-	 * 松弛
-	 * @param edge 需要进行松弛的边
-	 * @param fromPath edge的from的最短路径信息
-	 * @param paths 存放着其他点（对于dijkstra来说，就是还没有离开桌面的点）的最短路径信息
-	 */
-	private boolean relax(Edge<V, E> edge, PathInfo<V, E> fromPath, Map<V, PathInfo<V, E>> paths) {
-		// 新的可选择的最短路径：beginVertex到edge.from的最短路径 + edge.weight
-		E newWeight = weightManager.add(fromPath.weight, edge.weight);
-		// 以前的最短路径：beginVertex到edge.to的最短路径
-		PathInfo<V, E> oldPath = paths.get(edge.to.value);
-		if (oldPath != null && weightManager.compare(newWeight, oldPath.weight) >= 0) return false;
-		
-		if (oldPath == null) {
-			oldPath = new PathInfo<>();
-			paths.put(edge.to.value, oldPath);
-		} else {
-			oldPath.edgeInfos.clear();
-		}
-
-		oldPath.weight = newWeight;
-		oldPath.edgeInfos.addAll(fromPath.edgeInfos);
-		oldPath.edgeInfos.add(edge.info());
-		
-		return true;
-	}
 	
 	private Map<V, PathInfo<V, E>> dijkstra(V begin) {
 		Vertex<V, E> beginVertex = vertices.get(begin);
@@ -439,6 +380,7 @@ public class ListGraph<V, E> extends Graph<V, E> {
 		Map<V, PathInfo<V, E>> selectedPaths = new HashMap<>();
 		//起点到其他点的路径
 		Map<Vertex<V, E>, PathInfo<V, E>> paths = new HashMap<>();
+		/** 先确定begin到begin的最短路径，第一个离开桌面的是begin，为了可以在while中统一处理 */
 		paths.put(beginVertex, new PathInfo<>(weightManager.zero()));
 
 		while (!paths.isEmpty()) {
@@ -500,6 +442,63 @@ public class ListGraph<V, E> extends Graph<V, E> {
 			}
 		}
 		return minEntry;
+	}
+
+	private Map<V, PathInfo<V, E>> bellmanFord(V begin) {
+		Vertex<V, E> beginVertex = vertices.get(begin);
+		if (beginVertex == null) return null;
+
+		Map<V, PathInfo<V, E>> selectedPaths = new HashMap<>();
+		selectedPaths.put(begin, new PathInfo<>(weightManager.zero()));
+
+		int count = vertices.size() - 1;
+		for (int i = 0; i < count; i++) { // v - 1 次
+			for (Edge<V, E> edge : edges) {
+				PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
+				if (fromPath == null) continue;
+				relax(edge, fromPath, selectedPaths);
+			}
+		}
+
+		for (Edge<V, E> edge : edges) {
+			PathInfo<V, E> fromPath = selectedPaths.get(edge.from.value);
+			if (fromPath == null) continue;
+			if (relax(edge, fromPath, selectedPaths)) {
+				System.out.println("有负权环");
+				return null;
+			}
+		}
+
+		selectedPaths.remove(begin);
+		return selectedPaths;
+	}
+
+
+	/**
+	 * 松弛
+	 * @param edge 需要进行松弛的边
+	 * @param fromPath edge的from的最短路径信息
+	 * @param paths 存放着其他点（对于dijkstra来说，就是还没有离开桌面的点）的最短路径信息
+	 */
+	private boolean relax(Edge<V, E> edge, PathInfo<V, E> fromPath, Map<V, PathInfo<V, E>> paths) {
+		// 新的可选择的最短路径：beginVertex到edge.from的最短路径 + edge.weight
+		E newWeight = weightManager.add(fromPath.weight, edge.weight);
+		// 以前的最短路径：beginVertex到edge.to的最短路径
+		PathInfo<V, E> oldPath = paths.get(edge.to.value);
+		if (oldPath != null && weightManager.compare(newWeight, oldPath.weight) >= 0) return false;
+
+		if (oldPath == null) {
+			oldPath = new PathInfo<>();
+			paths.put(edge.to.value, oldPath);
+		} else {
+			oldPath.edgeInfos.clear();
+		}
+
+		oldPath.weight = newWeight;
+		oldPath.edgeInfos.addAll(fromPath.edgeInfos);
+		oldPath.edgeInfos.add(edge.info());
+
+		return true;
 	}
 	
 	@Override
