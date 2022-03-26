@@ -37,6 +37,7 @@ public class QuickSort<T extends Comparable<T>> extends Sort<T> {
 		
 		while (begin < end) {
 			while (begin < end) {
+				//如果条件改成<=，在元素都相同时，会导致分割的子序列极度不均匀。
 				if (cmp(pivot, array[end]) < 0) { // 右边元素 > 轴点元素
 					end--;
 				} else { // 右边元素 <= 轴点元素
